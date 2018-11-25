@@ -15,7 +15,7 @@
             android:layout_height="wrap_content"
             android:layout_centerInParent="true"
             android:adjustViewBounds="true"
-            android:src="@android:mipmap/sym_def_app_icon"/>
+            android:src="@mipmap/img_landing_page_01"/>
 
         <ProgressBar
             android:id="@+id/progressBar"

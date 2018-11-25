@@ -26,10 +26,10 @@ public class AppJavaScriptProxy {
 
 			@Override
 			public void run() {
-				if (!theWebView.getUrl().startsWith(
+				/*if (!theWebView.getUrl().startsWith(
 						"http://tutorials.jenkov.com")) {
 					return;
-				}
+				}*/
 
 				Toast toast = Toast.makeText(
 						theActivity.getApplicationContext(), message,

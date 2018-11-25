@@ -4,9 +4,12 @@ import android.app.Activity;
 import android.os.Build;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
+import android.util.Base64;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
+import android.webkit.CookieManager;
+import android.webkit.CookieSyncManager;
 import android.webkit.ValueCallback;
 import android.webkit.WebResourceResponse;
 import android.webkit.WebSettings;
@@ -43,6 +46,16 @@ public class AKORadioWebView extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.webview);
+
+        //not sure if you need this
+        CookieSyncManager.createInstance(this);
+        //it is default true, but hey...
+        CookieManager.getInstance().setAcceptCookie(true);
+        CookieManager cookieManager = CookieManager.getInstance();
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) {
+            CookieSyncManager.createInstance(this);
+        }
+        cookieManager.setAcceptCookie(true);
 
         progressBar = (ProgressBar) findViewById(R.id.progressBar);
         webView = (WebView) findViewById(R.id.webView);
@@ -120,14 +133,14 @@ public class AKORadioWebView extends AppCompatActivity {
             this.activity = activity;
             this.urlCache = new UrlCache(activity);
 
-            this.urlCache.register("http://tutorials.jenkov.com/", "tutorials-jenkov-com.html",
-                    "text/html", "UTF-8", 5 * UrlCache.ONE_MINUTE);
+            //this.urlCache.register("http://tutorials.jenkov.com/", "tutorials-jenkov-com.html", "text/html", "UTF-8", 5 * UrlCache.ONE_MINUTE);
 
         }
 
         @Override
         public boolean shouldOverrideUrlLoading(WebView webView, String url) {
             Log.d(TAG, "shouldOverrideUrlLoading URL: " + url);
+
             return false;
         }
 
@@ -158,7 +171,6 @@ public class AKORadioWebView extends AppCompatActivity {
             }
 
             //progressBar.setVisibility(View.GONE);
-
             return this.urlCache.load(url);
         }
 
@@ -169,6 +181,62 @@ public class AKORadioWebView extends AppCompatActivity {
 
             if("http://tutorials.jenkov.com/".equals(url)){
                 this.urlCache.load("http://tutorials.jenkov.com/java/index.html");
+            }
+
+            if("https://ako555.com/map/login".equals(url)) {
+                view.evaluateJavascript("javascript:" +
+                        "document.getElementsByName('username')[0].value='test';" +
+                        "document.getElementsByName('password')[0].value='12345';" +
+                        //"document.getElementById('frm_login').validate(opt_valid);" +
+                        "document.getElementsByTagName('button')[0].click();", new ValueCallback<String>() {
+                    @Override
+                    public void onReceiveValue(String value) {
+                        Log.d(TAG, "onPageFinished onReceiveValue: " + value);
+                    }
+                });
+            }
+
+            //webView.getSettings().setJavaScriptEnabled(true);
+            //webView.loadUrl("javascript:document.getElementsByName('username').value = 'test'");
+            //webView.loadUrl("javascript:document.getElementsByName('password')[0].value = '12345'");
+            //webView.loadUrl("javascript:document.forms['frm_login'].submit()");
+            /*webView.loadUrl(
+                    "javascript:(function() { " +
+                            "var element = document.getElementById('hplogo');"
+                            + "element.parentNode.removeChild(element);" +
+                            "})()");*/
+
+            //injectScriptFile(view, "js/script.js"); // see below ...
+
+            // test if the script was loaded
+            //view.loadUrl("javascript:setTimeout(test(), 500)");
+        }
+
+        private void injectScriptFile(WebView view, String scriptFile) {
+            InputStream input;
+            try {
+                input = getAssets().open(scriptFile);
+                byte[] buffer = new byte[input.available()];
+                input.read(buffer);
+                input.close();
+
+                // String-ify the script byte-array using BASE64 encoding !!!
+                String encoded = Base64.encodeToString(buffer, Base64.NO_WRAP);
+                view.loadUrl("javascript:(function() {" +
+                        "document.getElementsByName('username')[0].value='test';" +
+                        "document.getElementsByName('password')[0].value='12345';" +
+                        "document.getElementById('frm_login').submit();" +
+
+                        "script.type = 'text/javascript';" +
+                        // Tell the browser to BASE64-decode the string into your script !!!
+                        "script.innerHTML = window.atob('" + encoded + "');" +
+                        "parent.appendChild(script)" +
+                        "})()");
+                Log.d(TAG, "injectScriptFile");
+            } catch (IOException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+                Log.d(TAG, "injectScriptFile Exception: " + e.toString());
             }
         }
     }
