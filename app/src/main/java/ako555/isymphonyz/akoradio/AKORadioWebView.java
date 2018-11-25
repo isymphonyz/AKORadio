@@ -14,12 +14,16 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.ProgressBar;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
 
+import ako555.isymphonyz.akoradio.connection.AllowAPI;
 import ako555.isymphonyz.akoradio.utils.AppJavaScriptProxy;
 import ako555.isymphonyz.akoradio.utils.MyConfiguration;
 import ako555.isymphonyz.akoradio.utils.UrlCache;
@@ -33,6 +37,8 @@ public class AKORadioWebView extends AppCompatActivity {
 
     private String url = MyConfiguration.URL_RADIO_MAP;
 
+    private AllowAPI allowAPI;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -41,16 +47,20 @@ public class AKORadioWebView extends AppCompatActivity {
         progressBar = (ProgressBar) findViewById(R.id.progressBar);
         webView = (WebView) findViewById(R.id.webView);
 
-        progressBar.setVisibility(View.VISIBLE);
+        //progressBar.setVisibility(View.VISIBLE);
 
         WebSettings webSettings = webView.getSettings();
         webSettings.setJavaScriptEnabled(true);
+        webSettings.setPluginState(WebSettings.PluginState.ON);
         webSettings.setDomStorageEnabled(true);
         webSettings.setBuiltInZoomControls(true);
         webSettings.setDisplayZoomControls(true);
         webSettings.setLoadWithOverviewMode(true);
         webSettings.setUseWideViewPort(true);
         webSettings.setJavaScriptCanOpenWindowsAutomatically(true);
+        webSettings.setMediaPlaybackRequiresUserGesture(false);
+        webSettings.setSaveFormData(true);
+        webSettings.setSavePassword(true);
 
         WebViewClientImpl webViewClient = new WebViewClientImpl(this);
         webView.setWebViewClient(webViewClient);
@@ -67,7 +77,38 @@ public class AKORadioWebView extends AppCompatActivity {
             });
         }
 
+        Log.d(TAG, "loadUrl URL: " + url);
+        if (Build.VERSION.SDK_INT >= 21) {
+            webView.getSettings().setMixedContentMode( WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
+        }
         webView.loadUrl(url);
+
+        allowAPI = new AllowAPI();
+        allowAPI.setListener(new AllowAPI.AllowAPIListener() {
+            @Override
+            public void onAllowAPIPreExecuteConcluded() {
+
+            }
+
+            @Override
+            public void onAllowAPIPostExecuteConcluded(String result) {
+                try {
+                    Log.d(TAG, "result: " + result);
+                    JSONObject jObj = new JSONObject(result);
+                    String status = jObj.optString("allow");
+
+                    Log.d(TAG, "status: " + status);
+                    if(status.equals("1")) {
+
+                    } else {
+                        finish();
+                    }
+                } catch (JSONException e) {
+
+                }
+            }
+        });
+        allowAPI.execute("");
     }
 
     private class WebViewClientImpl extends WebViewClient {
@@ -86,11 +127,13 @@ public class AKORadioWebView extends AppCompatActivity {
 
         @Override
         public boolean shouldOverrideUrlLoading(WebView webView, String url) {
+            Log.d(TAG, "shouldOverrideUrlLoading URL: " + url);
             return false;
         }
 
         @Override
         public WebResourceResponse shouldInterceptRequest(WebView view, String url) {
+            Log.d(TAG, "WebResourceResponse URL: " + url);
             if(url.startsWith("http://tutorials.jenkov.com/images/logo.png")){
                 String mimeType = "image/png";
                 String encoding = "";
@@ -114,19 +157,19 @@ public class AKORadioWebView extends AppCompatActivity {
                 return response;
             }
 
+            //progressBar.setVisibility(View.GONE);
+
             return this.urlCache.load(url);
         }
 
         @Override
         public void onPageFinished(WebView view, String url) {
             super.onPageFinished(view, url);
-            Log.d(TAG, "URL: " + url);
+            Log.d(TAG, "onPageFinished URL: " + url);
 
             if("http://tutorials.jenkov.com/".equals(url)){
                 this.urlCache.load("http://tutorials.jenkov.com/java/index.html");
             }
-
-            progressBar.setVisibility(View.GONE);
         }
     }
 
